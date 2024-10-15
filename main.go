@@ -1,18 +1,21 @@
 package main
 
 import (
-	"context"
+	// "context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+
+	// "os"
 	"os/exec"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	// "github.com/aws/aws-sdk-go-v2/aws"
+	// "github.com/aws/aws-sdk-go-v2/config"
+	// "github.com/aws/aws-sdk-go-v2/credentials"
+	// "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
 )
@@ -30,21 +33,19 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,	
 }
 
-func createStash(path string) string {
-	buildCmd := exec.Command("docker","build",path)
-	image, err := buildCmd.CombinedOutput()
-	if err != nil{
-		fmt.Println(err);
+func createStash(name string, image string) {
+	userDir,_ := os.UserHomeDir()
+	mount := fmt.Sprintf("%s:/app", filepath.Join("/home", userDir, "s3-bucket", "stashes", name))
+	runCmd := exec.Command("docker", "run", "--name", name, "-v", mount, image)
+
+	out, err := runCmd.CombinedOutput()
+	if err != nil {
+		fmt.Printf("Error creating stash: %s\n", out)
+		return
 	}
 
-	runCmd := exec.Command("docker","run",string(image))
-	container, err := runCmd.CombinedOutput()
-	if err != nil{
-		fmt.Println(err);
-	}
-	return string(container)
+	fmt.Println(string(out))
 }
-
 func startHandler(w http.ResponseWriter, r *http.Request){
 	var body string
 	err := json.NewDecoder(r.Body).Decode(&body)
@@ -85,28 +86,29 @@ func main() {
         log.Fatalf("Error loading .env file")
     }
 
-	staticCreds := aws.NewCredentialsCache(
-		credentials.NewStaticCredentialsProvider(
-			os.Getenv("AWS_ACCESS_KEY"),
-			os.Getenv("AWS_ACCESS_SECRET"), ""))
+	// staticCreds := aws.NewCredentialsCache(
+	// 	credentials.NewStaticCredentialsProvider(
+	// 		os.Getenv("AWS_ACCESS_KEY"),
+	// 		os.Getenv("AWS_ACCESS_SECRET"), ""))
 			
-	cfg, err := config.LoadDefaultConfig(
-		context.TODO(),
-		config.WithRegion(os.Getenv("AWS_ACCESS_REGION")),
-		config.WithCredentialsProvider(staticCreds),
-	)
-	if err != nil {
-		log.Fatalf("unable to load SDK config, %v", err)
-	}
+	// cfg, err := config.LoadDefaultConfig(
+	// 	context.TODO(),
+	// 	config.WithRegion(os.Getenv("AWS_ACCESS_REGION")),
+	// 	config.WithCredentialsProvider(staticCreds),
+	// )
+	// if err != nil {
+	// 	log.Fatalf("unable to load SDK config, %v", err)
+	// }
 
-	s3Client := s3.NewFromConfig(cfg)
+	// s3Client := s3.NewFromConfig(cfg)
 
-	bucket := os.Getenv("AWS_BUCKET")
-	dstPrefix := "new/nodejs/"
-	srcPrefix := "stashes/check/"
+	// bucket := os.Getenv("AWS_BUCKET")
+	// dstPrefix := "new/nodejs/"
+	// srcPrefix := "stashes/check/"
 
-	err = CopyS3Folder(context.TODO(), s3Client, bucket, srcPrefix, dstPrefix)
-	if err != nil {
-		log.Fatalf("failed: %v", err)
-	}
+	// err = CopyS3Folder(context.TODO(), s3Client, bucket, srcPrefix, dstPrefix)
+	// if err != nil {
+	// 	log.Fatalf("failed: %v", err)
+	// }
+	createStash("newtest","nodejs")
 }
