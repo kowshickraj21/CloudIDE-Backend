@@ -1,12 +1,20 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"os/exec"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gorilla/websocket"
+	"github.com/joho/godotenv"
 )
 
 type Message struct{
@@ -70,8 +78,35 @@ func startSocket(w http.ResponseWriter, r *http.Request){
 	fmt.Println("Client Disconnected:", conn.LocalAddr())
 }
 
-func main(){
-	http.HandleFunc("/ws",startHandler)
-	fmt.Println("Server Listening at Port:3000")
-	http.ListenAndServe(":5000",nil);
+func main() {
+
+	err := 	godotenv.Load()
+    if err != nil {
+        log.Fatalf("Error loading .env file")
+    }
+
+	staticCreds := aws.NewCredentialsCache(
+		credentials.NewStaticCredentialsProvider(
+			os.Getenv("AWS_ACCESS_KEY"),
+			os.Getenv("AWS_ACCESS_SECRET"), ""))
+			
+	cfg, err := config.LoadDefaultConfig(
+		context.TODO(),
+		config.WithRegion(os.Getenv("AWS_ACCESS_REGION")),
+		config.WithCredentialsProvider(staticCreds),
+	)
+	if err != nil {
+		log.Fatalf("unable to load SDK config, %v", err)
+	}
+
+	s3Client := s3.NewFromConfig(cfg)
+
+	bucket := os.Getenv("AWS_BUCKET")
+	dstPrefix := "new/nodejs/"
+	srcPrefix := "stashes/check/"
+
+	err = CopyS3Folder(context.TODO(), s3Client, bucket, srcPrefix, dstPrefix)
+	if err != nil {
+		log.Fatalf("failed: %v", err)
+	}
 }

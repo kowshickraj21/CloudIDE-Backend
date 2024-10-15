@@ -1,7 +1,21 @@
-FROM node:18
+FROM node:18-slim
+
+RUN apt-get update && \
+    apt-get install -y s3fs curl 
+
+RUN useradd -m appuser
 
 WORKDIR /app
 
-COPY . .
+RUN chown -R appuser:appuser /app
 
-CMD ["npm","run dev"]
+USER appuser
+
+ENV MOUNT_POINT=/app
+
+RUN mkdir -p $MOUNT_POINT
+
+CMD s3fs $S3_BUCKET_NAME $MOUNT_POINT \
+    -o url=https://s3-$AWS_REGION.amazonaws.com \
+    -o use_path_request_style \
+    -o passwd_file=/etc/passwd-s3fs && npm run dev
