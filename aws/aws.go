@@ -1,8 +1,10 @@
 package aws
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"strings"
 
@@ -46,13 +48,34 @@ func CopyS3Folder(ctx context.Context, s3Client *s3.Client, bucket, srcPrefix, d
 	return nil
 }
 
-func DeleteS3Folder(ctx context.Context, s3Client *s3.Client, bucket, folder string) error {
+func CreateObject(ctx context.Context, client *s3.Client, bucket, object string) error {
+	emptyBody := io.NopCloser(bytes.NewReader([]byte{}))
+	_, err := client.PutObject(ctx,&s3.PutObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(object),
+		Body:   emptyBody,
+	})
+	return err
+}
+
+func RenameFile(ctx context.Context, client *s3.Client, bucket, oldKey, newKey string) error {
+		_, err := client.CopyObject(ctx,&s3.CopyObjectInput{
+			Bucket:     aws.String(bucket),
+			CopySource: aws.String(bucket + "/" + oldKey),
+			Key:        aws.String(newKey),
+		})
+		return err
+		// return DeleteFile(bucket, oldKey)
+}
+
+
+func DeleteS3Folder(ctx context.Context, client *s3.Client, bucket, folder string) error {
 	listInput := &s3.ListObjectsV2Input{
         Bucket: aws.String(bucket),
         Prefix: aws.String(folder), 
     }
 
-	listOutput, err := s3Client.ListObjectsV2(context.TODO(), listInput)
+	listOutput, err := client.ListObjectsV2(context.TODO(), listInput)
     if err != nil {
         log.Fatalf("Failed to list objects in folder: %v", err)
     }
@@ -77,7 +100,7 @@ func DeleteS3Folder(ctx context.Context, s3Client *s3.Client, bucket, folder str
         },
     }
 
-    _, err = s3Client.DeleteObjects(context.TODO(), deleteInput)
+    _, err = client.DeleteObjects(context.TODO(), deleteInput)
     if err != nil {
         log.Fatalf("Failed to delete objects: %v", err)
     }

@@ -1,9 +1,13 @@
 package ws
 
 import (
+	"context"
 	"fmt"
+	"main/aws"
 	"net/http"
+	"os"
 
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gorilla/websocket"
 )
 
@@ -20,7 +24,10 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,	
 }
 
-func startSocket(w http.ResponseWriter, r *http.Request){
+func StartSocket(w http.ResponseWriter, r *http.Request, client *s3.Client){
+
+	bucket := os.Getenv("AWS_BUCKET")
+
 	conn,err := upgrader.Upgrade(w,r,nil)
 	if err != nil {
 		fmt.Println(err);
@@ -28,17 +35,21 @@ func startSocket(w http.ResponseWriter, r *http.Request){
 	fmt.Println("New Client:",conn.LocalAddr())
 	defer conn.Close();
 
+
 	for {
 		var message Message
 		err := conn.ReadJSON(&message)
-		fmt.Println(message)
 		if err != nil {
 			fmt.Println(err);
 			break
-		} 
-		err = conn.WriteJSON(Message{Type: "Response",Data:"Recieved"});
-		if err != nil {
-			fmt.Println(err);
+		}
+		switch message.Type {
+		case "createObject":
+			aws.CreateObject(context.TODO(),client,bucket, message.Data)
+		case "deleteFolder":
+			aws.DeleteS3Folder(context.TODO(),client,bucket,message.Data)
+		default:
+			
 		} 
 	}
 	fmt.Println("Client Disconnected:", conn.LocalAddr())

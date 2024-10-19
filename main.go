@@ -1,26 +1,19 @@
 package main
 
 import (
-	"context"
 	"log"
-	"os"
-
-	"main/aws"
+	"main/ws"
+	"net/http"
 )
 
 func main() {
 
-	s3Client := AWSInit()
-	if s3Client == nil {
+	client := AWSInit()
+	if client == nil {
 		log.Fatalln("Initialization Error!")
 	}
-
-	bucket := os.Getenv("AWS_BUCKET")
-	dstPrefix := "new/nodejs/"
-	srcPrefix := "stashes/check/"
-
-	err := aws.CopyS3Folder(context.TODO(), s3Client, bucket, srcPrefix, dstPrefix)
-	if err != nil {
-		log.Fatalf("failed: %v", err)
-	}
+	
+	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		ws.StartSocket(w,r,client)
+	})
 }
