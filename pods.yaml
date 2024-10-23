@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: repl
+spec:
+  containers:
+    - name: user-container
+      image: nodejs
+      imagePullPolicy: Never
+      volumeMounts:
+        - name: code-volume
+          mountPath: /app 
+
+    - name: nginx-container
+      image: nginx:latest     
+      ports:
+        - containerPort: 80     
+      volumeMounts:
+        - name: nginx-config 
+          mountPath: /etc/nginx.conf 
+
+  volumes:
+    - name: code-volume
+      hostPath:
+        path: /hostmnt/s3-bucket
+        type: Directory
+
+    - name: nginx-config
+      hostPath:
+        path: /hostmnt/nginx.conf
+        type: File
