@@ -24,7 +24,7 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,	
 }
 
-func StartSocket(w http.ResponseWriter, r *http.Request, client *s3.Client){
+func StartSocket(w http.ResponseWriter,r *http.Request, client *s3.Client){
 
 	bucket := os.Getenv("AWS_BUCKET")
 
@@ -35,7 +35,7 @@ func StartSocket(w http.ResponseWriter, r *http.Request, client *s3.Client){
 	fmt.Println("New Client:",conn.LocalAddr())
 	defer conn.Close();
 
-
+	
 	for {
 		var message Message
 		err := conn.ReadJSON(&message)
@@ -48,6 +48,9 @@ func StartSocket(w http.ResponseWriter, r *http.Request, client *s3.Client){
 			aws.CreateObject(context.TODO(),client,bucket, message.Data)
 		case "deleteFolder":
 			aws.DeleteS3Folder(context.TODO(),client,bucket,message.Data)
+		case "getDir":
+			objects,_ := aws.ListDirectory(context.TODO(),client,bucket,message.Data)
+			conn.WriteJSON(objects)
 		default:
 			
 		} 

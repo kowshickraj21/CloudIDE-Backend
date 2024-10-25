@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 
-	// "main/ws"
+	"main/ws"
 
-	// "net/http"
+	"net/http"
 	"path/filepath"
 
 	v1 "k8s.io/api/core/v1"
@@ -20,16 +21,15 @@ import (
 )
 
 func main() {
-	startPod("check","nodejs")
-	// client := AWSInit()
-	// if client == nil {
-	// 	log.Fatalln("Initialization Error!")
-	// }
-	
-	// http.HandleFunc("/start", func(w http.ResponseWriter, r *http.Request) {
+	// startPod("check","nodejs")
+	client := AWSInit()
+	if client == nil {
+		log.Fatalln("Initialization Error!")
+	}
+	http.HandleFunc("/start", func(w http.ResponseWriter, r *http.Request) {
+	ws.StartSocket(w,r,client)
 		
-	// 	// ws.StartSocket(w,r,client)
-	// })
+	})
 }
 
 func startPod(name, image string) {

@@ -58,6 +58,33 @@ func CreateObject(ctx context.Context, client *s3.Client, bucket, object string)
 	return err
 }
 
+func ListDirectory(ctx context.Context, client *s3.Client, bucket, prefix string) ([]string, error) {
+    var contents []string
+    input := &s3.ListObjectsV2Input{
+        Bucket: aws.String(bucket),
+        Prefix: aws.String(prefix),
+    }
+
+    for {
+        result, err := client.ListObjectsV2(ctx, input)
+        if err != nil {
+			fmt.Println(err)
+            return nil, err
+        }
+        for _, item := range result.Contents {
+            contents = append(contents, *item.Key)
+        }
+        if result.IsTruncated != nil && *result.IsTruncated  {
+            input.ContinuationToken = result.NextContinuationToken
+        } else {
+            break
+        }
+    }
+
+    return contents, nil
+}
+
+
 func RenameFile(ctx context.Context, client *s3.Client, bucket, oldKey, newKey string) error {
 		_, err := client.CopyObject(ctx,&s3.CopyObjectInput{
 			Bucket:     aws.String(bucket),
