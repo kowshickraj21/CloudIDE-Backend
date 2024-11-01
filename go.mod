@@ -65,6 +65,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.28.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.32.2 // indirect
 	github.com/aws/smithy-go v1.22.0 // indirect
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/lib/pq v1.10.9
 	k8s.io/api v0.31.1
 	k8s.io/apimachinery v0.31.1 // indirect
 	k8s.io/client-go v0.31.1 // indirect
