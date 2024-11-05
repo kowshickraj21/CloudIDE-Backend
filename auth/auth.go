@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/lib/pq"
 )
 
 func registerUser(db *sql.DB,userInfo User,provider string) {
@@ -21,20 +20,20 @@ func registerUser(db *sql.DB,userInfo User,provider string) {
 
 }
 
-func SignJWT(user *User)(string,error){
+func SignJWT(user *User) error {
 	claims := jwt.MapClaims{
 		"name": user.Name,
 		"email": user.Email,
 		"iss": "oauth-app-golang",
 		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(),
 	}
-
+	var err error
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,claims)
-	signed,err := token.SignedString([]byte(os.Getenv("JWT_KEY")))
+	user.Jwt,err = token.SignedString([]byte(os.Getenv("JWT_KEY")))
 	if err != nil {
-		return "",err;
+		return err;
 	}
-	return signed,nil
+	return nil
 }
 
 func ParseJWT(token string)(*User,error){
@@ -60,22 +59,24 @@ func ParseJWT(token string)(*User,error){
 	}
 }
 
-func GetAuthUser(db *sql.DB,token string) (*User,error) {
+func GetAuthUser(db *sql.DB,token string) bool {
 	claims,err := ParseJWT(token);
 	if err != nil {
-		return nil,err;
+		return false;
 	}
 	user,err := GetUser(db,claims.Email);
 	if err != nil {
-		return nil,err;
+		return false;
 	}
-	return user,nil;
+	if user.Email != claims.Email {
+		return false
+	}
+	return true;
 }
 
 func CreateUser(db *sql.DB, user User,provider string) (sql.Result,error) {
-	user.Problems = []int64{}
-	query := `INSERT INTO Users (name, email, picture, provider, problems) VALUES ($1, $2, $3, $4, $5)`
-	res,err := db.Exec(query, user.Name, user.Email, user.Picture, provider, pq.Array(user.Problems))
+	query := `INSERT INTO Users (name, email, picture, provider) VALUES ($1, $2, $3, $4)`
+	res,err := db.Exec(query, user.Name, user.Email, user.Picture, provider)
 	if err != nil {
 		return nil,err
 	}
@@ -84,11 +85,11 @@ func CreateUser(db *sql.DB, user User,provider string) (sql.Result,error) {
 
 func GetUser(db *sql.DB, email string) (*User, error) {
 
-	query := `SELECT name, email, picture, problems FROM Users WHERE email = $1`
+	query := `SELECT name, email, picture FROM Users WHERE email = $1`
 	row := db.QueryRow(query,email)
 
 	var user User
-	err := row.Scan(&user.Name, &user.Email, &user.Picture, pq.Array(&user.Problems))
+	err := row.Scan(&user.Name, &user.Email, &user.Picture)
 
 	if err != nil {
 		return nil, err

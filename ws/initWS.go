@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"main/aws"
+	"main/k8s"
 	"net/http"
 	"os"
 
@@ -27,6 +28,7 @@ var upgrader = websocket.Upgrader{
 func StartSocket(w http.ResponseWriter,r *http.Request, client *s3.Client){
 
 	bucket := os.Getenv("AWS_BUCKET")
+	k8s.StartPod("check","nodejs")
 
 	conn,err := upgrader.Upgrade(w,r,nil)
 	if err != nil {
@@ -35,7 +37,6 @@ func StartSocket(w http.ResponseWriter,r *http.Request, client *s3.Client){
 	fmt.Println("New Client:",conn.LocalAddr())
 	defer conn.Close();
 
-	
 	for {
 		var message Message
 		err := conn.ReadJSON(&message)
@@ -52,7 +53,8 @@ func StartSocket(w http.ResponseWriter,r *http.Request, client *s3.Client){
 			objects,_ := aws.ListDirectory(context.TODO(),client,bucket,message.Data)
 			conn.WriteJSON(objects)
 		default:
-			
+			fmt.Println("Wrong Request occured!")
+			conn.Close()
 		} 
 	}
 	fmt.Println("Client Disconnected:", conn.LocalAddr())
