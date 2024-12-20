@@ -1,31 +1,32 @@
-apiVersion: v1
-kind: Pod
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: repl
+  name: user-deployment
 spec:
-  containers:
-    - name: user-container
-      image: nodejs
-      imagePullPolicy: Never
-      volumeMounts:
-        - name: code-volume
-          mountPath: /app 
-
-    - name: nginx-container
-      image: nginx:latest     
-      ports:
-        - containerPort: 80     
-      volumeMounts:
-        - name: nginx-config 
-          mountPath: /etc/nginx.conf 
-
-  volumes:
-    - name: code-volume
-      hostPath:
-        path: /hostmnt/s3-bucket
-        type: Directory
-
-    - name: nginx-config
-      hostPath:
-        path: /hostmnt/nginx.conf
-        type: File
+  replicas: 1
+  selector:
+    matchLabels:
+      app: user-app
+  template:
+    metadata:
+      labels:
+        app: user-app
+    spec:
+      containers:
+        - name: user-container
+          image: nginx:latest
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+spec:
+  selector:
+    app: user-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP

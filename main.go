@@ -7,6 +7,7 @@ import (
 	"log"
 
 	"main/auth"
+	"main/k8s"
 	"main/ws"
 
 	"net/http"
@@ -63,7 +64,36 @@ func main() {
 		}
 	}))
 
+	http.HandleFunc("/create", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		var stash k8s.DeployementDetails
+		err := json.NewDecoder(r.Body).Decode(&stash)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+		}
+
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	http.HandleFunc("/run", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		var details k8s.DeployementDetails
+		err := json.NewDecoder(r.Body).Decode(&details)
+		if err != nil {
+			fmt.Println(err)
+		}
+		name,err := k8s.StartDeployment(details)
+		fmt.Println(name)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}))
+
 	http.HandleFunc("/start", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("Start function called")
 	ws.StartSocket(w,r,client)
 		
 	}))
