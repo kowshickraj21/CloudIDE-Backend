@@ -35,8 +35,7 @@ func StartDeployment(details DeployementDetails) (string, error) {
 	namespace := "default"
 
 
-	var replicas int32
-	replicas = 1
+	var replicas int32 = 1
 	deployment := &appsv1.Deployment{
         ObjectMeta: metav1.ObjectMeta{
             Name: details.Name,
@@ -62,6 +61,11 @@ func StartDeployment(details DeployementDetails) (string, error) {
                             Ports: []corev1.ContainerPort{
                                 {
                                     ContainerPort: details.Port,
+                                },
+                            },
+                            VolumeMounts: []corev1.VolumeMount{
+                                {
+                                    MountPath: fmt.Sprintf("/hostmnt/s3/stash/%s",details.Name),
                                 },
                             },
                         },
@@ -103,6 +107,10 @@ func StartDeployment(details DeployementDetails) (string, error) {
 	}
 
 	err = updateIngress(client,namespace,ingressName,"/out/",details.Name,80)
+
+    if err != nil {
+        return "",err
+    }
 
 	fmt.Printf("Deployment '%s' and Service '%s' are created!", newDeployment.Name, newService.Name)
 	return newDeployment.Name, nil

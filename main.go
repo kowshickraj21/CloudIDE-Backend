@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 
 	"main/auth"
+	"main/aws"
 	"main/k8s"
 	"main/ws"
 
@@ -71,7 +74,8 @@ func main() {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 		}
-
+		bucket := os.Getenv("AWS_BUCKET")
+		err = aws.CopyS3Folder(context.TODO(),client,bucket,"/new/node","stash/newcheck")
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
@@ -90,22 +94,21 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
+		ws.StartSocket(w,r,client)
 	}))
 
-	http.HandleFunc("/start", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("Start function called")
-	ws.StartSocket(w,r,client)
-		
-	}))
 
 	if err := http.ListenAndServe(":3050", nil); err != nil {
 		fmt.Println("Server error:", err)
 	}
 }
 
+
+
 func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	origin := os.Getenv("CORS_ORIGIN")
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "http://localhost:5173")
+		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Origin, user")
 
