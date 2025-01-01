@@ -68,14 +68,19 @@ func main() {
 	}))
 
 	http.HandleFunc("/create", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		var stash k8s.DeployementDetails
+		var stash k8s.Stash
 		err := json.NewDecoder(r.Body).Decode(&stash)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 		}
 		bucket := os.Getenv("AWS_BUCKET")
-		err = aws.CopyS3Folder(context.TODO(),client,bucket,"/new/node","stash/newcheck")
+		err = aws.CopyS3Folder(context.TODO(),client,bucket,fmt.Sprintf("new/%s",stash.Image),fmt.Sprintf("stashes/%s",stash.Name))
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+		}
+		_,err = k8s.CreateStash(db,stash)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
@@ -84,7 +89,7 @@ func main() {
 	}))
 
 	http.HandleFunc("/run", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		var details k8s.DeployementDetails
+		var details k8s.Stash
 		err := json.NewDecoder(r.Body).Decode(&details)
 		if err != nil {
 			fmt.Println(err)

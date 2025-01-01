@@ -84,7 +84,6 @@ func CreateUser(db *sql.DB, user User,provider string) (sql.Result,error) {
 }
 
 func GetUser(db *sql.DB, email string) (*User, error) {
-
 	query := `SELECT name, email, picture FROM Users WHERE email = $1`
 	row := db.QueryRow(query,email)
 

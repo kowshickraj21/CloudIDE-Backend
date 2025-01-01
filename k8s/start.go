@@ -15,13 +15,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-type DeployementDetails struct {
-	Name string `json:"name"`
-	Image string `json:"image"`
-	Port int32 `json:"port"`
-}
-
-func StartDeployment(details DeployementDetails) (string, error) {
+func StartDeployment(details Stash) (string, error) {
 	home, _ := os.UserHomeDir()
 	kubeConfigPath := filepath.Join(home, ".kube/config")
 	ingressName := "user-ingress"
