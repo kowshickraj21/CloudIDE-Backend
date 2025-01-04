@@ -3,10 +3,10 @@ package k8s
 import "database/sql"
 
 type Stash struct {
-	Name string
-	Image string
-	Owner string
-	Port int32
+	Name string `json:"name"`
+	Image string `json:"image"`
+	Owner string `json:"owner"`
+	Port int32 `json:"port"`
 }
 
 func CreateStash(db *sql.DB, stash Stash) (sql.Result,error) {
@@ -39,3 +39,10 @@ func GetStashes(db *sql.DB, owner string) ([]Stash, error) {
 	return stashes, nil
 }
 
+func FindStash(db *sql.DB, name string) Stash{
+	query := `SELECT * FROM Stashes WHERE name = $1`
+	row := db.QueryRow(query,name)
+	var stash Stash
+	_ = row.Scan(&stash.Name, &stash.Image, &stash.Owner, &stash.Port)
+	return stash
+}

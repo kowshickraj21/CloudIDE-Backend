@@ -24,7 +24,7 @@ func StartDeployment(details Stash) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
+    // hostPathType := corev1.HostPathDirectory
 	client := kubernetes.NewForConfigOrDie(config)
 	namespace := "default"
 
@@ -52,18 +52,32 @@ func StartDeployment(details Stash) (string, error) {
                         {
                             Name:  details.Name,
                             Image: details.Image,
+                            TTY: true,
+                            Stdin: true,
                             Ports: []corev1.ContainerPort{
                                 {
                                     ContainerPort: details.Port,
                                 },
                             },
-                            VolumeMounts: []corev1.VolumeMount{
-                                {
-                                    MountPath: fmt.Sprintf("/hostmnt/s3/stash/%s",details.Name),
-                                },
-                            },
+                            // VolumeMounts: []corev1.VolumeMount{
+                            //     {
+                            //         Name: "home-mount",
+                            //         MountPath: "/home",
+                            //     },
+                            // },
                         },
                     },
+                    // Volumes: []corev1.Volume{
+                    //     {
+                    //         Name: "home-mount",
+                    //         VolumeSource: corev1.VolumeSource{
+                    //             HostPath: &corev1.HostPathVolumeSource{
+                    //                 Path: fmt.Sprintf("/hostmnt/s3-bucket/stash/%s",details.Name),
+                    //                 Type: &hostPathType,
+                    //             },
+                    //         },
+                    //     },
+                    // },
                 },
             },
         },

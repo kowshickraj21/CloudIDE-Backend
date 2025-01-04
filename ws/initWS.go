@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"main/aws"
+	"main/k8s"
 	"net/http"
 	"os"
 
@@ -34,6 +35,8 @@ func StartSocket(w http.ResponseWriter,r *http.Request, client *s3.Client){
 	}
 	fmt.Println("New Client:",conn.LocalAddr())
 	defer conn.Close();
+	terminal := k8s.StartTerminal()
+
 
 	for {
 		var message Message
@@ -57,6 +60,31 @@ func StartSocket(w http.ResponseWriter,r *http.Request, client *s3.Client){
 			}
 		case "writeFile":
 			aws.WriteFile(context.TODO(),client,bucket, message.Path,message.Data)
+		case "terminalMessage":
+			fmt.Println("Terminal Message")
+			if terminal == nil {
+				fmt.Println("No active terminal session")
+				break
+			}
+			_, err := terminal.Stdin.Write([]byte("ls" + "\n"))
+			_, err = terminal.Stdin.Write([]byte("cd bin" + "\n"))
+			_, err = terminal.Stdin.Write([]byte("ls" + "\n"))
+			if err != nil {
+				fmt.Println("Error writing to terminal:", err)
+			}
+			go func() {
+				buf := make([]byte, 1024)
+				for {
+					n, err := terminal.Stdout.Read(buf)
+					if err != nil {
+						fmt.Println("Error reading from terminal stdout:", err)
+						break
+					}
+					if n > 0 {
+						fmt.Println(string(buf))
+					}
+				}
+			}()
 		default:
 			fmt.Println("Wrong Request occured!")
 			conn.Close()

@@ -11,6 +11,7 @@ import (
 	"main/auth"
 	"main/aws"
 	"main/k8s"
+
 	"main/ws"
 
 	"net/http"
@@ -67,6 +68,19 @@ func main() {
 		}
 	}))
 
+	http.HandleFunc("/findStash", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
+		var name string
+		err := json.NewDecoder(r.Body).Decode(&name)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+		}
+
+			stash := k8s.FindStash(db,name)
+			w.WriteHeader(http.StatusAccepted)
+			w.Write([]byte(stash.Name)) 
+	}))
+
 	http.HandleFunc("/create", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		var stash k8s.Stash
 		err := json.NewDecoder(r.Body).Decode(&stash)
@@ -88,7 +102,7 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	http.HandleFunc("/run", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/start",corsMiddleware(func(w http.ResponseWriter, r *http.Request){
 		var details k8s.Stash
 		err := json.NewDecoder(r.Body).Decode(&details)
 		if err != nil {
@@ -99,6 +113,9 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
+	}))
+
+	http.HandleFunc("/run", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
 		ws.StartSocket(w,r,client)
 	}))
 
