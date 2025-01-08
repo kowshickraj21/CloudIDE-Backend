@@ -30,10 +30,7 @@ func GetK8SClient () (*kubernetes.Clientset, string, string, error) {
     return client,ingress,namespace,nil
 }
 
-
-
 func StartDeployment(client *kubernetes.Clientset, ingressName,namespace string, details Stash) error {
-
 
     // hostPathType := corev1.HostPathDirectory
 	var replicas int32 = 1
@@ -199,4 +196,19 @@ func IsDeploymentRunning(client *kubernetes.Clientset, namespace,deploymentName 
         return true
     }
     return false
+}
+
+func CloseStash(name string) {
+    client,_,namespace,err := GetK8SClient()
+    if err != nil {
+        fmt.Println(err)
+    }
+    deployment,err := client.AppsV1().Deployments(namespace).Get(context.TODO(),name,metav1.GetOptions{})
+    if err != nil {
+        fmt.Println(err)
+    }
+    deployment.ObjectMeta.Annotations["isRunning"] = "False"
+    deployment.ObjectMeta.Annotations["LastOpened"] = time.Now().Format(time.RFC3339)
+    
+    client.AppsV1().Deployments(namespace).Update(context.TODO(),deployment,metav1.UpdateOptions{})
 }

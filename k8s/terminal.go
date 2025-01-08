@@ -24,7 +24,7 @@ type TerminalSession struct {
 	Close  func()
 }
 
-func StartTerminal() *TerminalSession {
+func StartTerminal(deploymentName string) *TerminalSession {
 	home, _ := os.UserHomeDir()
 	kubeConfigPath := filepath.Join(home, ".kube/config")
 
@@ -36,7 +36,6 @@ func StartTerminal() *TerminalSession {
 
 	clientset := kubernetes.NewForConfigOrDie(config)
 	namespace := "default"
-	deploymentName := "newtest"
 
 	podList, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("app=%s", deploymentName),

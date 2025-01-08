@@ -15,14 +15,6 @@ import (
 )
 
 func main () {
-	for {
-		RemoveDeployments()
-		time.Sleep(60000000000)
-	}
-}
-
-func RemoveDeployments() {
-
 
 	config, err := rest.InClusterConfig()
 	if err != nil {

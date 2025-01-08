@@ -27,7 +27,7 @@ var upgrader = websocket.Upgrader{
 }
 
 func StartSocket(w http.ResponseWriter,r *http.Request, client *s3.Client){
-
+	deploymentName := r.URL.Query().Get("stash")
 	bucket := os.Getenv("AWS_BUCKET")
 	conn,err := upgrader.Upgrade(w,r,nil)
 	if err != nil {
@@ -35,7 +35,7 @@ func StartSocket(w http.ResponseWriter,r *http.Request, client *s3.Client){
 	}
 	fmt.Println("New Client:",conn.LocalAddr())
 	defer conn.Close();
-	terminal := k8s.StartTerminal()
+	terminal := k8s.StartTerminal(deploymentName)
 
 
 	for {
@@ -86,7 +86,7 @@ func StartSocket(w http.ResponseWriter,r *http.Request, client *s3.Client){
 		default:
 			fmt.Println("Wrong Request occured!")
 			terminal.Close()
-			
+			k8s.CloseStash(deploymentName)
 			conn.Close()
 		} 
 	}
