@@ -60,15 +60,13 @@ func StartSocket(w http.ResponseWriter,r *http.Request, client *s3.Client){
 			}
 		case "writeFile":
 			aws.WriteFile(context.TODO(),client,bucket, message.Path,message.Data)
-		case "terminalMessage":
+		case "terminalCommand":
 			fmt.Println("Terminal Message")
 			if terminal == nil {
 				fmt.Println("No active terminal session")
 				break
 			}
-			_, err := terminal.Stdin.Write([]byte("ls" + "\n"))
-			_, err = terminal.Stdin.Write([]byte("cd bin" + "\n"))
-			_, err = terminal.Stdin.Write([]byte("ls" + "\n"))
+			_, err := terminal.Stdin.Write([]byte(message.Data + "\n"))
 			if err != nil {
 				fmt.Println("Error writing to terminal:", err)
 			}
@@ -87,6 +85,8 @@ func StartSocket(w http.ResponseWriter,r *http.Request, client *s3.Client){
 			}()
 		default:
 			fmt.Println("Wrong Request occured!")
+			terminal.Close()
+			
 			conn.Close()
 		} 
 	}

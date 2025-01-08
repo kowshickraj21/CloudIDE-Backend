@@ -108,8 +108,7 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
-		name,err := k8s.StartDeployment(details)
-		fmt.Println(name)
+		err = k8s.StartStash(details)
 		if err != nil {
 			fmt.Println(err)
 		}

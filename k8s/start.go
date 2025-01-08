@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -15,24 +16,34 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func StartDeployment(details Stash) (string, error) {
-	home, _ := os.UserHomeDir()
+func GetK8SClient () (*kubernetes.Clientset, string, string, error) {
+    home, _ := os.UserHomeDir()
+    ingress := os.Getenv("INGRESS_NAME")
+    namespace := os.Getenv("K8S_NAMESPACE")
 	kubeConfigPath := filepath.Join(home, ".kube/config")
-	ingressName := "user-ingress"
 
 	config, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
 	if err != nil {
-		return "", err
+		return nil,ingress,namespace, err
 	}
-    // hostPathType := corev1.HostPathDirectory
 	client := kubernetes.NewForConfigOrDie(config)
-	namespace := "default"
+    return client,ingress,namespace,nil
+}
 
 
+
+func StartDeployment(client *kubernetes.Clientset, ingressName,namespace string, details Stash) error {
+
+
+    // hostPathType := corev1.HostPathDirectory
 	var replicas int32 = 1
 	deployment := &appsv1.Deployment{
         ObjectMeta: metav1.ObjectMeta{
             Name: details.Name,
+            Annotations: map[string]string{
+                "isRunning":"True",
+                "LastOpened": time.Now().Format(time.RFC3339),
+            },
         },
         Spec: appsv1.DeploymentSpec{
             Replicas: &replicas,
@@ -105,23 +116,23 @@ func StartDeployment(details Stash) (string, error) {
 	deploymentsClient := client.AppsV1().Deployments(namespace)
 	newDeployment, err := deploymentsClient.Create(context.TODO(), deployment, metav1.CreateOptions{})
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	servicesClient := client.CoreV1().Services(namespace)
 	newService, err := servicesClient.Create(context.TODO(), service, metav1.CreateOptions{})
 	if err != nil {
-		return "", err
+		return  err
 	}
 
 	err = updateIngress(client,namespace,ingressName,"/out/",details.Name,80)
 
     if err != nil {
-        return "",err
+        return err
     }
 
 	fmt.Printf("Deployment '%s' and Service '%s' are created!", newDeployment.Name, newService.Name)
-	return newDeployment.Name, nil
+	return nil
 }
 
 
@@ -159,4 +170,33 @@ func updateIngress(client *kubernetes.Clientset, namespace, ingressName, path, s
     }
 	fmt.Println("Added to ingress")
     return nil
+}
+
+
+func StartStash(details Stash) error {
+    client,ingress,namespace,err := GetK8SClient()
+    if err != nil {
+        return err
+    }
+    if IsDeploymentRunning(client,namespace,details.Name) {
+        return nil
+    }
+    
+    err = StartDeployment(client,ingress,namespace,details)
+    if err != nil {
+        return err
+    }
+    return nil
+}
+
+
+func IsDeploymentRunning(client *kubernetes.Clientset, namespace,deploymentName string) bool {
+    deployment,err := client.AppsV1().Deployments(namespace).Get(context.TODO(), deploymentName, metav1.GetOptions{})
+    if err != nil {
+    return false
+    }
+    if deployment.Name == deploymentName {
+        return true
+    }
+    return false
 }
