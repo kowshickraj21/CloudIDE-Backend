@@ -7,12 +7,3 @@ metadata:
 spec:
   rules:
   - host: localhost
-    http:
-      paths:
-      - path: /out/check
-        pathType: Prefix
-        backend:
-          service:
-            name: user-service
-            port:
-              number: 80

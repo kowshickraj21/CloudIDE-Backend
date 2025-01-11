@@ -51,7 +51,7 @@ func StartTerminal(deploymentName string) *TerminalSession {
 	}
 
 	pod := podList.Items[0]
-
+	fmt.Println("Running Terminal")
 	request := clientset.CoreV1().RESTClient().
 		Post().
 		Namespace(pod.Namespace).

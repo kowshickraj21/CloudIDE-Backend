@@ -7,6 +7,7 @@ import (
 	"main/k8s"
 	"net/http"
 	"os"
+	"regexp"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gorilla/websocket"
@@ -28,6 +29,7 @@ var upgrader = websocket.Upgrader{
 
 func StartSocket(w http.ResponseWriter,r *http.Request, client *s3.Client){
 	deploymentName := r.URL.Query().Get("stash")
+	fmt.Println("deployment Name",deploymentName)
 	bucket := os.Getenv("AWS_BUCKET")
 	conn,err := upgrader.Upgrade(w,r,nil)
 	if err != nil {
@@ -61,7 +63,6 @@ func StartSocket(w http.ResponseWriter,r *http.Request, client *s3.Client){
 		case "writeFile":
 			aws.WriteFile(context.TODO(),client,bucket, message.Path,message.Data)
 		case "terminalCommand":
-			fmt.Println("Terminal Message")
 			if terminal == nil {
 				fmt.Println("No active terminal session")
 				break
@@ -79,7 +80,12 @@ func StartSocket(w http.ResponseWriter,r *http.Request, client *s3.Client){
 						break
 					}
 					if n > 0 {
-						fmt.Println(string(buf))
+						output := Message{
+							Type: "output",
+							Data: stripANSI(string(buf[:n])),
+						}
+						conn.WriteJSON(output)
+						fmt.Println("Output:",stripANSI(string(buf[:n])))
 					}
 				}
 			}()
@@ -91,4 +97,10 @@ func StartSocket(w http.ResponseWriter,r *http.Request, client *s3.Client){
 		} 
 	}
 	fmt.Println("Client Disconnected:", conn.LocalAddr())
+}
+
+
+func stripANSI(input string) string {
+    re := regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+    return re.ReplaceAllString(input, "")
 }

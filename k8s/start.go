@@ -31,8 +31,10 @@ func GetK8SClient () (*kubernetes.Clientset, string, string, error) {
 }
 
 func StartDeployment(client *kubernetes.Clientset, ingressName,namespace string, details Stash) error {
-
-    // hostPathType := corev1.HostPathDirectory
+    if details.Image == "node" {
+        details.Image = "node:iron-alpine3.21"
+    }
+    hostPathType := corev1.HostPathDirectory
 	var replicas int32 = 1
 	deployment := &appsv1.Deployment{
         ObjectMeta: metav1.ObjectMeta{
@@ -40,6 +42,9 @@ func StartDeployment(client *kubernetes.Clientset, ingressName,namespace string,
             Annotations: map[string]string{
                 "isRunning":"True",
                 "LastOpened": time.Now().Format(time.RFC3339),
+            },
+            Labels: map[string]string{
+                "app": details.Name,
             },
         },
         Spec: appsv1.DeploymentSpec{
@@ -60,6 +65,7 @@ func StartDeployment(client *kubernetes.Clientset, ingressName,namespace string,
                         {
                             Name:  details.Name,
                             Image: details.Image,
+                            ImagePullPolicy: "IfNotPresent",
                             TTY: true,
                             Stdin: true,
                             Ports: []corev1.ContainerPort{
@@ -67,25 +73,25 @@ func StartDeployment(client *kubernetes.Clientset, ingressName,namespace string,
                                     ContainerPort: details.Port,
                                 },
                             },
-                            // VolumeMounts: []corev1.VolumeMount{
-                            //     {
-                            //         Name: "home-mount",
-                            //         MountPath: "/home",
-                            //     },
-                            // },
+                            VolumeMounts: []corev1.VolumeMount{
+                                {
+                                    Name: "home-mount",
+                                    MountPath: "/home",
+                                },
+                            },
                         },
                     },
-                    // Volumes: []corev1.Volume{
-                    //     {
-                    //         Name: "home-mount",
-                    //         VolumeSource: corev1.VolumeSource{
-                    //             HostPath: &corev1.HostPathVolumeSource{
-                    //                 Path: fmt.Sprintf("/hostmnt/s3-bucket/stash/%s",details.Name),
-                    //                 Type: &hostPathType,
-                    //             },
-                    //         },
-                    //     },
-                    // },
+                    Volumes: []corev1.Volume{
+                        {
+                            Name: "home-mount",
+                            VolumeSource: corev1.VolumeSource{
+                                HostPath: &corev1.HostPathVolumeSource{
+                                    Path: "/hostmnt/s3-bucket",
+                                    Type: &hostPathType,
+                                },
+                            },
+                        },
+                    },
                 },
             },
         },
@@ -193,6 +199,11 @@ func IsDeploymentRunning(client *kubernetes.Clientset, namespace,deploymentName 
     return false
     }
     if deployment.Name == deploymentName {
+        deployment.ObjectMeta.Annotations["isRunning"] = "True"
+        deployment.ObjectMeta.Annotations["LastOpened"] = time.Now().Format(time.RFC3339)
+        
+        client.AppsV1().Deployments(namespace).Update(context.TODO(),deployment,metav1.UpdateOptions{})
+        fmt.Println("Deplyment already running")
         return true
     }
     return false
@@ -209,6 +220,6 @@ func CloseStash(name string) {
     }
     deployment.ObjectMeta.Annotations["isRunning"] = "False"
     deployment.ObjectMeta.Annotations["LastOpened"] = time.Now().Format(time.RFC3339)
-    
+   fmt.Println("Deplyment Closing Starts") 
     client.AppsV1().Deployments(namespace).Update(context.TODO(),deployment,metav1.UpdateOptions{})
 }

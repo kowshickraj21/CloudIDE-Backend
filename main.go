@@ -69,16 +69,17 @@ func main() {
 	}))
 
 	http.HandleFunc("/findStash", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		var name string
-		err := json.NewDecoder(r.Body).Decode(&name)
+		var data map[string]string
+		err := json.NewDecoder(r.Body).Decode(&data)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 		}
 
-			stash := k8s.FindStash(db,name)
-			w.WriteHeader(http.StatusAccepted)
-			w.Write([]byte(stash.Name)) 
+			stash := k8s.FindStash(db,data["name"])
+			stashJSON,_ := json.Marshal(stash)
+			w.Header().Set("Content-Type", "application/json")
+			w.Write(stashJSON)
 	}))
 
 	http.HandleFunc("/create", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
@@ -112,6 +113,7 @@ func main() {
 		if err != nil {
 			fmt.Println(err)
 		}
+		
 	}))
 
 	http.HandleFunc("/run", corsMiddleware(func(w http.ResponseWriter, r *http.Request) {
