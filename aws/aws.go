@@ -59,7 +59,7 @@ func CopyS3Folder(ctx context.Context, s3Client *s3.Client, bucket, srcPrefix, d
 	return nil
 }
 
-func WriteFile(ctx context.Context, client *s3.Client, bucket, object, content string) error {
+func WriteFile(ctx context.Context, client *s3.Client, bucket, object, content string) {
 	fileBytes := []byte(content)
 	_, err := client.PutObject(ctx,&s3.PutObjectInput{
 		Bucket: aws.String(bucket),
@@ -67,8 +67,10 @@ func WriteFile(ctx context.Context, client *s3.Client, bucket, object, content s
 		Body:   bytes.NewReader(fileBytes),
 		ContentType: aws.String("text/plain"),
 	})
+	fmt.Println("Saved File: ",object)
+	if err != nil {
 	fmt.Println("ERR Create:",err)
-	return err
+	}
 }
 
 func CreateObject(ctx context.Context, client *s3.Client, bucket, object string) error {

@@ -78,6 +78,10 @@ func StartDeployment(client *kubernetes.Clientset, ingressName,namespace string,
                                     Name: "home-mount",
                                     MountPath: "/home",
                                 },
+                                {
+                                    Name: "node-mount",
+                                    MountPath: "/home/node_modules",
+                                },
                             },
                         },
                     },
@@ -86,9 +90,15 @@ func StartDeployment(client *kubernetes.Clientset, ingressName,namespace string,
                             Name: "home-mount",
                             VolumeSource: corev1.VolumeSource{
                                 HostPath: &corev1.HostPathVolumeSource{
-                                    Path: "/hostmnt/s3-bucket",
+                                    Path: "/s3/stashes/test",
                                     Type: &hostPathType,
                                 },
+                            },
+                        },
+                        {
+                            Name: "node-mount",
+                            VolumeSource: corev1.VolumeSource{
+                                EmptyDir: &corev1.EmptyDirVolumeSource{},
                             },
                         },
                     },
