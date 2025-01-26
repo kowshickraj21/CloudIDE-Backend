@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/gorilla/websocket"
@@ -29,7 +30,6 @@ var upgrader = websocket.Upgrader{
 
 func StartSocket(w http.ResponseWriter,r *http.Request, client *s3.Client){
 	deploymentName := r.URL.Query().Get("stash")
-	fmt.Println("deployment Name",deploymentName)
 	bucket := os.Getenv("AWS_BUCKET")
 	conn,err := upgrader.Upgrade(w,r,nil)
 	if err != nil {
@@ -39,7 +39,7 @@ func StartSocket(w http.ResponseWriter,r *http.Request, client *s3.Client){
 	defer conn.Close();
 	terminal := k8s.StartTerminal(deploymentName)
 
-
+	fmt.Println("Running WS")
 	for {
 		var message Message
 		err := conn.ReadJSON(&message)
@@ -84,7 +84,7 @@ func StartSocket(w http.ResponseWriter,r *http.Request, client *s3.Client){
 							Type: "output",
 							Data: stripANSI(string(buf[:n])),
 						}
-						conn.WriteJSON(output)
+						safeWriteJSON(conn,output)
 						fmt.Println("Output:",stripANSI(string(buf[:n])))
 					}
 				}
@@ -96,6 +96,9 @@ func StartSocket(w http.ResponseWriter,r *http.Request, client *s3.Client){
 			conn.Close()
 		} 
 	}
+	fmt.Println("terminal Closed")
+	terminal.Close()
+	k8s.CloseStash(deploymentName)
 	fmt.Println("Client Disconnected:", conn.LocalAddr())
 }
 
@@ -103,4 +106,12 @@ func StartSocket(w http.ResponseWriter,r *http.Request, client *s3.Client){
 func stripANSI(input string) string {
     re := regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
     return re.ReplaceAllString(input, "")
+}
+
+var writeMutex sync.Mutex
+
+func safeWriteJSON(conn *websocket.Conn, message interface{}) error {
+	writeMutex.Lock()
+	defer writeMutex.Unlock()
+	return conn.WriteJSON(message)
 }

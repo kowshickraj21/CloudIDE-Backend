@@ -4,22 +4,34 @@ import (
 	"context"
 	"fmt"
 
+	// "os"
+	// "path/filepath"
+
 	"log"
-	"time"
+	// "time"
 
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	// "k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/rest"
 )
 
 func main () {
 
+	// home, _ := os.UserHomeDir()
+	// kubeConfigPath := filepath.Join(home, ".kube/config")
+
+	// config, err := clientcmd.BuildConfigFromFlags("", kubeConfigPath)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+
 	config, err := rest.InClusterConfig()
-	if err != nil {
-		log.Fatalf("Error creating in-cluster config: %v", err)
-	}
+		if err != nil {
+			panic("Failed to get in-cluster config")
+		}
 
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
@@ -39,16 +51,16 @@ func main () {
 			continue
 		}
 		if isRunning == "False"  {
-			lastRun,timeExists := deployment.ObjectMeta.Annotations["LastOpened"]
+			// lastRun,timeExists := deployment.ObjectMeta.Annotations["LastOpened"]
 
-			lastOpenedTime, err := time.Parse(time.RFC3339, lastRun)
-			if err != nil {
-				fmt.Println(err)
-			}
-			elapsed := time.Since(lastOpenedTime)
-			if elapsed > 10*time.Minute || !timeExists{
+			// lastOpenedTime, err := time.Parse(time.RFC3339, lastRun)
+			// if err != nil {
+			// 	fmt.Println(err)
+			// }
+			// elapsed := time.Since(lastOpenedTime)
+			// if elapsed > 10*time.Minute || !timeExists{
 				DeleteDeployment(clientset, namespace, deployment.Name)
-			}
+			// }
 		}
 	}
 }
@@ -66,11 +78,17 @@ func DeleteDeployment(client *kubernetes.Clientset, namespace,name string) {
 	}
 	fmt.Println("Removed Service")
 
-	ingress,err := client.NetworkingV1().Ingresses(namespace).Get(context.TODO(), "user-ingress", metav1.GetOptions{})
-	if err != nil {
-		fmt.Println(err)
-	}
-	paths := ingress.Spec.Rules[0].HTTP.Paths
+	ingress, err := client.NetworkingV1().Ingresses(namespace).Get(context.TODO(), "user-ingress", metav1.GetOptions{})
+if err != nil {
+    fmt.Println("Error fetching ingress:", err)
+    return
+}
+
+paths := ingress.Spec.Rules[0].HTTP.Paths
+if paths == nil {
+    fmt.Println("Ingress rule has no HTTP paths")
+    return
+}
 
 	updatedPaths := []networkingv1.HTTPIngressPath{}
 	for _,path := range paths {

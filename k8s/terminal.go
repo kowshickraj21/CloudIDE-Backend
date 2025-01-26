@@ -1,13 +1,12 @@
 package k8s
 
 import (
-	// "bufio"
-	// "bytes"
 	"context"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,6 +50,11 @@ func StartTerminal(deploymentName string) *TerminalSession {
 	}
 
 	pod := podList.Items[0]
+	err = waitForPod(pod)
+	if err != nil {
+		fmt.Println(err);
+		return nil;
+	}
 	fmt.Println("Running Terminal")
 	request := clientset.CoreV1().RESTClient().
 		Post().
@@ -59,7 +63,7 @@ func StartTerminal(deploymentName string) *TerminalSession {
 		Name(pod.Name).
 		SubResource("exec").
 		VersionedParams(&v1.PodExecOptions{
-			Command: []string{"/bin/sh"},
+			Command: []string{"/bin/sh", "-c", "stty -echo; exec /bin/sh"},
 			Stdin:   true,
 			Stdout:  true,
 			Stderr:  true,
@@ -77,7 +81,7 @@ func StartTerminal(deploymentName string) *TerminalSession {
 	stderrPipeReader, stderrPipeWriter := io.Pipe()
 
 	go func() {
-		err = exec.Stream(remotecommand.StreamOptions{
+		err = exec.StreamWithContext(context.TODO(),remotecommand.StreamOptions{
 			Stdin:  stdinPipeReader,
 			Stdout: stdoutPipeWriter,
 			Stderr: stderrPipeWriter,
@@ -97,5 +101,17 @@ func StartTerminal(deploymentName string) *TerminalSession {
 			stdoutPipeReader.Close()
 			stderrPipeReader.Close()
 		},
+	}
+}
+
+func waitForPod(pod v1.Pod) error {
+	for {
+		if pod.Status.Phase == v1.PodRunning {
+			fmt.Println("Pod Started Running")
+			return nil
+		}else if pod.Status.Phase != v1.PodPending{
+			return fmt.Errorf("pod %s failed to run",pod.Name);
+		}
+		time.Sleep(2 * time.Second)
 	}
 }

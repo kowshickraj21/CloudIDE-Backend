@@ -90,7 +90,7 @@ func StartDeployment(client *kubernetes.Clientset, ingressName,namespace string,
                             Name: "home-mount",
                             VolumeSource: corev1.VolumeSource{
                                 HostPath: &corev1.HostPathVolumeSource{
-                                    Path: "/s3/stashes/test",
+                                    Path: fmt.Sprintf("/s3/stashes/%s",details.Name),
                                     Type: &hostPathType,
                                 },
                             },
@@ -141,6 +141,7 @@ func StartDeployment(client *kubernetes.Clientset, ingressName,namespace string,
 	err = updateIngress(client,namespace,ingressName,"/out/",details.Name,80)
 
     if err != nil {
+        fmt.Println(err)
         return err
     }
 
